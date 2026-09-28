@@ -1,0 +1,25 @@
+apiVersion: 1
+datasources:
+  - name: diag-repository
+    uid: diag-repo
+    type: grafana-postgresql-datasource
+    url: repository:5432
+    user: postgres
+    jsonData:
+      database: diag
+      sslmode: disable
+      timescaledb: true
+      postgresVersion: 1600
+    secureJsonData:
+      password: $POSTGRES_PASSWORD
+  - name: target
+    uid: target
+    type: grafana-postgresql-datasource
+    url: target:5432
+    user: profiler
+    jsonData:
+      database: app
+      sslmode: disable
+      postgresVersion: 1600
+    secureJsonData:
+      password: $PROFILER_PASSWORD
