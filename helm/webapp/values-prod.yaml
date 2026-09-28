@@ -1,0 +1,27 @@
+replicaCount: 3
+
+resources:
+  requests:
+    cpu: 250m
+    memory: 512Mi
+  limits:
+    memory: 1Gi
+goMemLimit: "920MiB"
+
+existingSecret: webapp-secrets
+
+ingress:
+  enabled: true
+  annotations:
+    nginx.ingress.kubernetes.io/limit-rps: "50"
+  hosts:
+    - host: app.example.com
+      paths: ["/"]
+  tls:
+    - secretName: app-example-com-tls
+      hosts: ["app.example.com"]
+
+autoscaling:
+  enabled: true
+  minReplicas: 3
+  maxReplicas: 10

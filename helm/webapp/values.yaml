@@ -1,0 +1,81 @@
+# Базовые значения. Окружения переопределяют только то, что отличается:
+# values-prod.yaml подключается поверх через -f.
+
+replicaCount: 2
+
+image:
+  repository: registry.example.com/team/webapp
+  tag: ""                     # по умолчанию .Chart.AppVersion; в CI — SHA коммита
+  pullPolicy: IfNotPresent
+
+imagePullSecrets: []
+
+containerPort: 8080
+
+# Приложение на Go: мягкий лимит heap ниже лимита контейнера, чтобы GC
+# начинал работать раньше, чем придёт OOMKiller. Держать ~90% от limits.memory.
+goMemLimit: "460MiB"
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 256Mi
+  limits:
+    memory: 512Mi              # CPU limit не ставим сознательно: throttling хуже, чем делёж по requests
+
+probes:
+  # startup — пока приложение прогревается, liveness не убивает под
+  startup:
+    path: /healthz
+    failureThreshold: 30
+    periodSeconds: 2
+  # readiness — только собственное состояние, без проверки БД/кэша:
+  # иначе падение зависимости снимет из балансировки все поды разом
+  readiness:
+    path: /readyz
+    periodSeconds: 5
+    failureThreshold: 3
+  liveness:
+    path: /healthz
+    periodSeconds: 10
+    failureThreshold: 3
+
+# Несекретная конфигурация → ConfigMap (при изменении поды перекатываются, см. checksum)
+config:
+  LOG_LEVEL: info
+  HTTP_PORT: "8080"
+
+# Секреты не храним в values: только ссылка на Secret, созданный вне чарта
+# (Vault / External Secrets / sealed-secrets).
+existingSecret: ""
+
+service:
+  type: ClusterIP
+  port: 80
+
+ingress:
+  enabled: false
+  className: nginx
+  annotations: {}
+  hosts:
+    - host: app.example.com
+      paths: ["/"]
+  tls: []
+
+autoscaling:
+  enabled: false
+  minReplicas: 2
+  maxReplicas: 6
+  targetCPUUtilizationPercentage: 70
+
+podDisruptionBudget:
+  enabled: true
+  maxUnavailable: 1
+
+# Даём балансировщику время убрать под из upstream до SIGTERM
+preStopSleepSeconds: 5
+terminationGracePeriodSeconds: 30
+
+podAnnotations: {}
+nodeSelector: {}
+tolerations: []
