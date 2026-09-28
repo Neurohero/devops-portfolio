@@ -1,0 +1,108 @@
+{
+  "uid": "pg-diag",
+  "title": "PostgreSQL: блокировки и тяжёлые запросы",
+  "schemaVersion": 39,
+  "time": {
+    "from": "now-3h",
+    "to": "now"
+  },
+  "refresh": "30s",
+  "panels": [
+    {
+      "id": 1,
+      "type": "timeseries",
+      "title": "Ожидания блокировок (сессий в ожидании)",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "diag-repo"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 24,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "rawQuery": true,
+          "editorMode": "code",
+          "format": "time_series",
+          "rawSql": "SELECT time_bucket($__interval, ts) AS time, count(*) AS waits\nFROM lock_waits WHERE $__timeFilter(ts)\nGROUP BY 1 ORDER BY 1"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "type": "table",
+      "title": "Кто кого ждал",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "diag-repo"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 8,
+        "w": 24,
+        "h": 9
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "rawQuery": true,
+          "editorMode": "code",
+          "format": "table",
+          "rawSql": "SELECT ts, pid, blocked_by, waiting, usename, datname, wait_event, query\nFROM lock_waits WHERE $__timeFilter(ts)\nORDER BY ts DESC LIMIT 200"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "type": "table",
+      "title": "Топ запросов по суммарному времени (pg_stat_statements, сейчас)",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "target"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 17,
+        "w": 16,
+        "h": 10
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "rawQuery": true,
+          "editorMode": "code",
+          "format": "table",
+          "rawSql": "SELECT round(total_exec_time::numeric, 1) AS total_ms, calls,\n       round(mean_exec_time::numeric, 2) AS mean_ms, rows, left(query, 200) AS query\nFROM pg_stat_statements\nORDER BY total_exec_time DESC LIMIT 20"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "type": "table",
+      "title": "Снимки pg_profile (для ./report.sh)",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "diag-repo"
+      },
+      "gridPos": {
+        "x": 16,
+        "y": 17,
+        "w": 8,
+        "h": 10
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "rawQuery": true,
+          "editorMode": "code",
+          "format": "table",
+          "rawSql": "SELECT sample, sample_time FROM show_samples('target', 7) ORDER BY sample DESC"
+        }
+      ]
+    }
+  ]
+}
