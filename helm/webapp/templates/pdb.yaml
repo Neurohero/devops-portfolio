@@ -1,0 +1,14 @@
+{{- if .Values.podDisruptionBudget.enabled }}
+# drain ноды при обслуживании не выселит больше maxUnavailable подов разом
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "webapp.fullname" . }}
+  labels:
+    {{- include "webapp.labels" . | nindent 4 }}
+spec:
+  maxUnavailable: {{ .Values.podDisruptionBudget.maxUnavailable }}
+  selector:
+    matchLabels:
+      {{- include "webapp.selectorLabels" . | nindent 6 }}
+{{- end }}
